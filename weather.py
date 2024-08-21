@@ -1,12 +1,11 @@
 from flask import Flask,render_template,request,abort
-# import json to load json data to python dictionary
 import json
-# urllib.request to make a request to api
 import urllib.request
-
 import os
 from dotenv import load_dotenv
-#NEXT TASK IS TO IMPLEMENT FORECAST 
+from collections import defaultdict
+from datetime import datetime
+
 
 app = Flask(__name__)
 
@@ -14,40 +13,77 @@ API_KEY = os.environ.get('API')
 
 
 def tocelcius(temp):
-    return str(round(float(temp) - 273.16,2))
+    return str(round(float(temp) - 273.16,2)) #if we dont round it to two decimal places then it would be like this - 25.123456789
 
 @app.route('/',methods=['POST','GET'])
 def weather():
     
     source = None
-    data = {}
-
+    weather_data = {}
+    forecast_dict = defaultdict(list)
 
     if request.method == 'POST':
         city = request.form['city']
+        #forecast_specific_day = request.form['specific_day']
         
-        # source contain json data from api
-        try:
-            source = urllib.request.urlopen('http://api.openweathermap.org/data/2.5/weather?q=' + city + '&appid='+API_KEY).read()
-        except:
-             message='adikaprasanga'
-             return abort(404)
-        
-        # converting json data to dictionary
+        weather = urllib.request.urlopen('http://api.openweathermap.org/data/2.5/weather?q=' + city + '&appid='+API_KEY).read()
+        forecast = urllib.request.urlopen(f'http://api.openweathermap.org/data/2.5/forecast?q={city}&appid={API_KEY}').read()  
 
-        if source is not None:
-            list_of_data = json.loads(source)
-            data = {
+        if weather is not None:
+            list_of_data = json.loads(weather)
+            weather_data = {
                 "country_code": str(list_of_data['sys']['country']),
-                "coordinate": str(list_of_data['coord']['lon']) + ' ' + str(list_of_data['coord']['lat']),
-                "temp": str(list_of_data['main']['temp']) + 'k',
-                "temp_cel": tocelcius(list_of_data['main']['temp']) + 'C',
+                "coordinate": str(list_of_data['coord']['lon']) + ' in longitude and '  + str(list_of_data['coord']['lat']) + ' in latitude ',
+                "temp": str(list_of_data['main']['temp']) + ' K',
+                "temp_cel": tocelcius(list_of_data['main']['temp']) + ' °C',
                 "pressure": str(list_of_data['main']['pressure']),
-                "humidity": str(list_of_data['main']['humidity']),
-                 "cityname":str(city),
+                "humidity": str(list_of_data['main']['humidity'])+ '%',
+                "cityname":str(city).capitalize()
             }
+
+        if forecast is not None: 
+            list_of_data = json.loads(forecast)
+            forecast_list = list_of_data['list']
+            forecast_data = defaultdict(list) #this is how it would look, defaultdict(<class 'list'>, {'a': [1, 2], 'b': [3]})
+            
+            for forecast in forecast_list:
+                date = forecast['dt_txt'].split(' ')[0]
+                forecast_data[date].append(forecast)
+            
+            for date,forecasts in forecast_data.items():
+                formated_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d %B, %A") #Saturday 9 August
+                for forecast in forecasts:
+                    time = datetime.strptime(forecast['dt_txt'],"%Y-%m-%d %H:%M:%S").strftime("%H:%M")
+                    temp_k = forecast["main"]["temp"]
+                    temp_c = round(temp_k - 273.15) # temp_c = round(26.85) would result in 27
+                    description = forecast['weather'][0]['description']
+                    icon = forecast['weather'][0]['icon']
+
+                    forecast_info = {
+                                     "formated_date": formated_date,
+                                     "time": time, 
+                                      "temp_k":temp_k,
+                                      "temp_c":temp_c, 
+                                      "description":description,
+                                      "icon":icon
+                                      }
+                    
+                    if time in ('09:00','12:00','18:00','21:00'):
+                        if time == '09:00': val = 'Morning'
+                        elif time == '12:00': val = 'Afternoon'
+                        elif time == '18:00': val = 'Evening'
+                        elif time == '21:00': val = 'Night'
+                        forecast_info['val'] = val
+                        forecast_dict[date].append(forecast_info)     
+                  
+    return render_template('index.html',weather_data=weather_data,forecast_data = forecast_dict)
+
+
     
-    return render_template('index.html',data=data)
+@app.errorhandler(500)
+def global_page_not_found(e):
+    return render_template('errorPage.html')
+            
 
 
 
@@ -58,53 +94,18 @@ if __name__ == '__main__':
 ''''
 
 
-#http://api.openweathermap.org/data/2.5/weather?q=Bangalore&appid=48a90ac42caa09f90dcaeee4096b9e53
+http://api.openweathermap.org/data/2.5/weather?q=Bangalore&appid={}
 
 
-{
-  "coord": {
-    "lon": 77.6033,
-    "lat": 12.9762
-  },
-  "weather": [
-    {
-      "id": 803,
-      "main": "Clouds",
-      "description": "broken clouds",
-      "icon": "04n"
-    }
-  ],
-  "base": "stations",
-  "main": {
-    "temp": 294.35,
-    "feels_like": 294.95,
-    "temp_min": 293.88,
-    "temp_max": 294.95,
-    "pressure": 1012,
-    "humidity": 93,
-    "sea_level": 1012,
-    "grnd_level": 915
-  },
-  "visibility": 6000,
-  "wind": {
-    "speed": 5.66,
-    "deg": 240
-  },
-  "clouds": {
-    "all": 75
-  },
-  "dt": 1722446397,
-  "sys": {
-    "type": 1,
-    "id": 9205,
-    "country": "IN",
-    "sunrise": 1722386094,
-    "sunset": 1722431813
-  },
-  "timezone": 19800,
-  "id": 1277333,
-  "name": "Bengaluru",
-  "cod": 200
-}
+
+http://api.openweathermap.org/data/2.5/forecast?q=Bangalore&cnt=2&appid={} #no need of cnt fetc,h all the data that they allow cause there are hardly any
+
+http://api.openweathermap.org/data/2.5/forecast?q=Bangalore&appid={}
+
+
+
+
+
+
 
 '''

@@ -3,17 +3,63 @@
 
 <head>
   <meta charset="utf-8">
-  <title>weather</title>
+  <title>weather </title>
   <!-- Latest compiled and minified CSS -->
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
 
+<style>
 
+.forecast-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.forecast-day {
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+}
+
+.forecast-day:last-of-type {
+    border-bottom: none;
+}
+
+
+.forecast-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.forecast-item p {
+    flex: 1;
+    margin: 0;
+}
+
+
+.forecast-item p strong {
+    color: #333;
+}
+
+.forecast-item p em {
+    color: #555;
+}
+
+
+
+
+
+</style>
 
 </head>
 
 <body>
   <nav class="row" style="background: #337ab7; color: white;">
-    <h1 class="col-md-3 text-center">weather</h1>
+    <h1 class="col-md-3 text-center">Know the Weather</h1>
   </nav>
   <br />
   <br />
@@ -28,25 +74,59 @@
         </div>
         <form>
   </center>
-  {% if(data) %}
-  <div class="row">
-    {% if data.country_code and data.coordinate and data.temp and data.pressure and data.humidity %}
+
+  {% if(weather_data) %}
+
+  <div class="row weather">
     <div class="col-md-6 col-md-offset-3">
-      <h3>country code : {{data.country_code}}</h1>
-        <h5>City name : {{data.cityname}}</h5>
-        <h5>coordinate : {{data.coordinate}}</h5>
-        <h5>temp (in kelvin) : {{data.temp}}</h5>
-        <h5>temp (in celcius) : {{data.temp_cel}}</h5>
-        <h5>pressure : {{data.pressure}} </h5>
-        <h5>humidity : {{data.humidity}}</h5>
+      <br>
+      <h2>Current weather of {{weather_data.cityname}}</h2>
+        <br>
+        <h5>Country code : {{weather_data.country_code}}</h5>
+        <h5>Coordinates : {{weather_data.coordinate}}</h5>
+        <h5>Temp (in kelvin) : {{weather_data.temp}}</h5>
+        <h5>Temp (in celcius) : {{weather_data.temp_cel}}</h5>
+        <h5>Humidity : {{weather_data.humidity}}</h5>
 
-        <a> click here to know about the weather forecast of the city, {{data.cityname}}</a>
     </div>
-    {% endif %}
-
   </div>
 
   {% endif %}
+
+  {% if(forecast_data)%}
+
+
+  <div class ="row forecast">
+    <div class="col-md-6 col-md-offset-3">
+      <h2>Weather forecast of {{weather_data.cityname}}</h2>
+
+
+      <div class="forecast-container">
+        {% for key, forecast in forecast_data.items() %}
+        <div class="forecast-day">
+            <h3>{{ forecast[0].formated_date }}</h3>
+            {% for data in forecast %}
+            <div class="forecast-item">
+                <p>
+                    The temperature is expected to be <strong>{{ data['temp_c'] }}°C</strong> in the {{ data['val'] }},
+                    with the forecast predicting {{ data['description'] }}<img src="http://openweathermap.org/img/w/{{ data['icon'] }}.png" alt="{{ data['description'] }}" class="weather-icon">
+                </p>
+              </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+
+    </div>
+  </div>
+
+
+
+ 
+
+  {% endif %}
+
+
 </body>
 
 </html>
